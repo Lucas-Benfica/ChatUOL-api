@@ -31,6 +31,10 @@ app.listen(PORT, () => console.log(`Servidor está rodando na porta ${PORT}`))
 app.post("/participants", async(req, res) => {
     const { name } = req.body
 
+	if(!name){
+		return res.sendStatus(422)
+	}
+
 	//Validando se o name não está vazio com Joi
 	const userSchema = joi.object({
 		name: joi.string().required()
@@ -59,14 +63,14 @@ app.post("/participants", async(req, res) => {
 
 			await db.collection("messages").insertOne(message)
 
-			res.sendStatus(201)
+			return res.sendStatus(201)
 		}else{
-			res.status(409).send("Participante já cadastrado")
+			return res.status(409).send("Participante já cadastrado")
 		}
 
 
 	}catch (err){
-		res.status(500).send(err.message)
+		return res.status(500).send(err.message)
 	}
 })
 
@@ -78,6 +82,10 @@ app.get("/participants", async(req,res) => {
 app.post("/messages", async(req,res) => {
 	const { to, text, type } = req.body
 	const {user} = req.headers
+
+	if(!to || !text){
+		return res.sendStatus(422)
+	}
 
 	const messageSchema = joi.object({
 		to: joi.string().required(),
@@ -160,7 +168,7 @@ setInterval(async() => {
         const participants = await db.collection('participants').find({lastStatus: {$lt: Date.now() - 10000}}).toArray()
 
         participants.forEach(async p => {
-			const {name} = p
+			const {name, _id} = p
             const message = {
                 from: name,
                 to: 'Todos',
@@ -169,7 +177,7 @@ setInterval(async() => {
                 time: dayjs().format('HH:mm:ss')
             }
 
-            db.collection('participants').deleteOne({_id: new ObjectId(p.id)});
+            db.collection('participants').deleteOne({_id: new ObjectId(_id)});
             db.collection('messages').insertOne(message);
         });
     }catch (err) {
